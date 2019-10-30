@@ -1,7 +1,4 @@
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -28,7 +25,7 @@ A date in ISO 8601 format where a Golden Cross occurred. If no Golden Cross happ
 For example:
 2016-01-03
 
- */
+*/
 
 public class DayMovingEverage {
 
@@ -38,99 +35,90 @@ public class DayMovingEverage {
         double average;
 
         // initialize the average to the current days price
-        public Day(String date, double price) {
+        private Day(String date, double price) {
             this.date = date;
             this.price = price;
             this.average = price;
-
         }
     }
+
+        public ArrayList<String> getBulishDays(File file) {
+            ArrayList<String> bulishDays = new ArrayList<>();
+            try {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+                try {
+                    String line;
+                    double fiftyDayDMA = 0.00;
+                    double fiftyDaySum = 0.00;
+                    double nineDaySum = 0.00;
+                    int numDays = 0;
+                    double nineDayDMA = 0.00;
+                    double sum = 0.00;
+                    Queue<Day> queue9 = new LinkedList<>();
+                    Queue<Day> queue50 = new LinkedList<>();
+                    while ((line = reader.readLine()) != null) {
+                        String date = line.substring(0, 10).trim();
+                        String price = line.substring(11, 16).trim();
+                        Double priceD = new Double(price);
+                        Day day = new Day(date, priceD);
+                        // add days to the queues of 9-Day DMA's and 50 day DMA's
+                        queue9.add(day);
+                        queue50.add(day);
+                        //  increment totals of each prices
+                        fiftyDaySum += day.price;
+                        nineDaySum += day.price;
+                        // increment amount of days passed per each lie
+                        numDays++;
+                        // calculate everage after 50 days gathered in the queue
+                        while (queue50.size() == 50) {
+                            // calculate everage
+                            fiftyDayDMA = calculateDMAAndMoveFirstDay( fiftyDaySum, 50, queue50);
+                            fiftyDaySum = removeOldDayFromTheQueue(queue50, fiftyDaySum);
+
+                        }
+                        // start calculating 9-day DMA only after 9 days are in the queue(9th day)
+                        while (queue9.size() == 9 && numDays > 8) {
+                            // calculate everage after 9 days gathered in the queue
+                            //nineDayDMA = nineDaySum / 9;
+                            //Day firstDay9 = queue9.poll();
+                            //nineDaySum -= firstDay9.price;
+                            nineDayDMA = calculateDMAAndMoveFirstDay(nineDaySum, 9, queue9);
+                            nineDaySum = removeOldDayFromTheQueue(queue9, nineDaySum);
+                            if (nineDayDMA > fiftyDayDMA && fiftyDayDMA > 0.00) {
+                                bulishDays.add(day.date);
+                            }
+                        }
+                    }
+                } finally {
+                    reader.close();
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            return bulishDays;
+        }
+
+        // calculated DMA and removed the first enqued day out the que
+        public double calculateDMAAndMoveFirstDay(double sum, int days, Queue<Day> queue){
+            return sum/days;
+        }
+
+        public double removeOldDayFromTheQueue(Queue<Day> queue, double sum){
+            Day firstDay = queue.poll();
+            sum -= firstDay.price;
+            return sum;
+        }
 
     public static void main(String[] main) throws java.io.FileNotFoundException {
-        try {
-            // InputStreamReader in = new InputStreamReader( new FileInputStream("Machintosh%20HD/Users/student/Documents/input.rtf"));
-            String line;
-            // InputStream in = new FileInputStream(new File("Users/student/Documents/input.rtf"));
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/Users/student/Dropbox/input.txt")));
-            StringBuilder out = new StringBuilder();
-            double fiftyDayDMA = 0.00;
-            double fiftyDaySum = 0.00;
-            double nineDaySum = 0.00;
-            int numDays = 0;
-            double nineDayDMA = 0.00;
-            double sum = 0.00;
-            Queue<Day> queue9 = new LinkedList<>();
-            Queue<Day> queue50 = new LinkedList<>();
-            ArrayList<Day> list = new ArrayList<>();
-            while ((line = reader.readLine()) != null) {
-                String date = line.substring(0, 10).trim();
-                String price = line.substring(11, 16).trim();
-                Double priceD = new Double(price);
-                Day day = new Day(date, priceD);
-                //System.out.println(day.date);
-                queue9.add(day);
-                queue50.add(day);
-                fiftyDaySum += day.price;
-                nineDaySum += day.price;
-                numDays++;
-                // if the 9 day average cannot be calculated before numDays hit 9 - store this everage somewhere
-                sum += day.price;
+        File file = new File(("/Users/student/Dropbox/input.txt"));
 
-                day.average = sum / numDays;
-                //System.out.println("Day Everage " + day.average);
-                // when reached 50 days - remove first day from the que and add new to the end
-                // recalculate the everage
-                while (queue50.size() == 50) {
-                    // calculate everage
-                   // System.out.println("50Queue size " + queue50.size());
-                    //System.out.print("50Day DMA  " + fiftyDayDMA);
-                    fiftyDayDMA = fiftyDaySum / 50;
-                    Day firstDay50 = queue50.poll();
-                    fiftyDaySum -= firstDay50.price;
-                    // compare current 9days with this
-                    /*
-                    System.out.println("50 Day DMA " + fiftyDayDMA);
-                    System.out.println("The date" + day.date);
-                    System.out.println(" Last removed day " + firstDay50.price);
-                    */
+        DayMovingEverage myEverage= new DayMovingEverage();
 
+         ArrayList<String> dates =  myEverage.getBulishDays(file);
 
-                }
-
-                //if(numDays > 9) {
-
-                    while (queue9.size() == 9 && numDays > 8) {
-                        // calculate everage
-                        //System.out.println("9Queue size " + queue9.size());
-                        nineDayDMA = nineDaySum / 9;
-                        Day firstDay9 = queue9.poll();
-                        // System.out.println("day.average " + day.average);
-                        nineDaySum -= firstDay9.price;
-                        Day lastEnquedDay = ((LinkedList<Day>) queue9).get(queue9.size() - 1);
-                        if (nineDayDMA > fiftyDayDMA && fiftyDayDMA > 0.00) {
-                            System.out.println("**** " + day.date + "******");
-                        }
-
-                        System.out.println("The day that 9DMA is higher - " + day.date);
-                        System.out.print("50Day DMA  " + fiftyDayDMA);
-                        System.out.println("Last enqued day " + lastEnquedDay.date + ", " + lastEnquedDay.average);
-
-                        // }
-                        //  System.out.println("9 Day DMA " + nineDayDMA);
-                        // System.out.println(" Last removed day " + firstDay9.price);
-                        //((LinkedList<Day>) queue50).addLast(day);
-                    }
-                }
-
-
-                // for every day, check if the 50 day everage, check if the Day's 9 day everage is larger
-
-            //}
-            //Prints the string content read from input stream
-            //reader.close();
-        } catch (IOException e1) {
-            e1.printStackTrace();
+        for(String date: dates) {
+            System.out.println(date);
         }
-
     }
+
 }
